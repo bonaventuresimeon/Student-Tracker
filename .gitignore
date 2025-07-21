@@ -175,3 +175,4 @@ cython_debug/
 venv/
 key
 key.pub
+awscliv2.zip
