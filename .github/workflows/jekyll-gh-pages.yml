@@ -24,21 +24,19 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Build with Jekyll
+      - name: Build with Jekyll (templates folder)
         uses: actions/jekyll-build-pages@v1
         with:
-          source: ./
+          source: ./templates
           destination: ./_site
 
       - name: Add .nojekyll file
-        run: |
-          touch ./_site/.nojekyll
-          chmod 644 ./_site/.nojekyll
+        run: touch ./_site/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "./_site"
+          path: ./_site
 
   deploy:
     needs: build
@@ -47,6 +45,11 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages with Retry
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: nick-fields/retry@v3
+        with:
+          command: |
+            gh workflow run --repo ${{ github.repository }} ./github/workflows/deploy-pages.yml
+          max_attempts: 3
+          retry_wait_seconds: 20
