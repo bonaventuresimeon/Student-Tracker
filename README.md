@@ -65,66 +65,65 @@ Bonaventure Simeon
 
 ### 1. Clone the Repository
 
-```bash
 git clone https://github.com/bonaventuresimeon/Student-Tracker.git
 cd Student-Tracker
 
-2. Create Virtual Environment & Install Dependencies
+### 2. Create Virtual Environment & Install Dependencies
 
 python3 -m venv venv
 source venv/bin/activate      # On Windows use: venv\Scripts\activate
 pip install -r requirements.txt
 
-3. Configure Database and Vault
+### 3. Configure Database and Vault
 	•	Open app/main.py and update the Vault IP address if necessary.
 	•	Set your Vault token as an environment variable:
 
 export VAULT_TOKEN=<your_vault_token>
 
-4. Run the Application Locally
+### 4. Run the Application Locally
 
 uvicorn app.main:app --host 0.0.0.0 --port 8011 --reload
 
-5. Access the Application
+### 5. Access the Application
 
 Open your browser and visit:
 
 http://localhost:8011
 
-Or if running on a remote server, replace localhost with the server’s IP address:
+### Or if running on a remote server, replace localhost with the server’s IP address:
 
 http://<server-ip>:8011
 
-🐳 Docker Instructions
+## 🐳 Docker Instructions
 
-1. Build Docker Image
+### 1. Build Docker Image
 
 docker build -t student-tracker .
 
-2. Run Docker Container
+### 2. Run Docker Container
 
 docker run --env-file .env -p 8011:8000 student-tracker
 
-3. Push to Docker Hub
-	•	Log in to Docker Hub:
+### 3. Push to Docker Hub
+## Log in to Docker Hub:
 
 docker login
 
-	•	Tag and push your image (replace your-dockerhub-username accordingly):
+## Tag and push your image (replace your-dockerhub-username accordingly):
 
 docker tag student-tracker your-dockerhub-username/student-tracker
 docker push your-dockerhub-username/student-tracker
 
-📬 API Endpoints
+## 📬 API Endpoints
 
 Method	Endpoint	Description
 POST	/register?name=YourName	Register a new student
 GET	/status/{student_id}	View registration & progress
 POST	/update/{student_id}?week=week1	Update progress by week
 
-🌐 Deploying to Cloud (Optional)
+## 🌐 Deploying to Cloud (Optional)
 
-Deploy your app to popular cloud platforms such as:
+## Deploy your app to popular cloud platforms such as:
 	•	Render
 	•	Railway
 	•	Fly.io
@@ -132,45 +131,45 @@ Deploy your app to popular cloud platforms such as:
 	•	AWS Elastic Beanstalk
 	•	And many more…
 
-⚙️ Environment Variables
+## ⚙️ Environment Variables
 
 Variable	Description	Example
 VAULT_TOKEN	Vault authentication token	s.1234567890abcdef
 MONGO_URI	MongoDB connection URI	mongodb+srv://user:pass@cluster0.mongodb.net/db
 
-Make sure to place these variables in a .env file or your environment to avoid exposing sensitive data.
+### Make sure to place these variables in a .env file or your environment to avoid exposing sensitive data.
 
-🛠 Troubleshooting
-	•	MongoDB connection issues?
+## 🛠 Troubleshooting
+	### •	MongoDB connection issues?
 Verify your connection string and whitelist your IP on MongoDB Atlas.
-	•	Vault token errors?
+	### •	Vault token errors?
 Confirm your Vault token is valid and Vault server is reachable.
-	•	Docker container crashes?
+	### •	Docker container crashes?
 Check logs with docker logs <container_id> and ensure environment variables are set.
-	•	API requests failing?
+	### •	API requests failing?
 Confirm endpoints and parameters are correct and the server is running.
 
-🤝 Contributing
+## 🤝 Contributing
 
-Contributions are welcome! Feel free to:
+### Contributions are welcome! Feel free to:
 	•	Fork the repository
 	•	Open issues and feature requests
 	•	Submit pull requests with improvements or bug fixes
 
-Please adhere to the existing code style and include tests when applicable.
+### Please adhere to the existing code style and include tests when applicable.
 
-👩🏽‍💻 Credits
+## 👩🏽‍💻 Credits
 
-Built for the Cloud Native Series by:
+### Built for the Cloud Native Series by:
 	•	Original Author: Chisom Jude
 	•	Adopted and Collaborated by: Bonaventure Simeon
 
-If you want, I can also help you add:
+### If you want, I can also help you add:
 	•	GitHub badges (build status, Docker pulls, etc.)
 	•	GitHub Actions CI/CD pipelines for automated testing and deployment
 
-Just ask! 😊
+## Just ask! 😊
 
-Thank you for using Student-Tracker!
+### Thank you for using Student-Tracker!
 
 ---
