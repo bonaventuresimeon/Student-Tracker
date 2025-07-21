@@ -176,3 +176,6 @@ venv/
 key
 key.pub
 awscliv2.zip
+/.env
+.env.*
+.dist
