@@ -1,34 +1,46 @@
-from app.database import student_collection
-from app.models import Student
-from uuid import uuid4
-from typing import List  # Added this for Version 2.0
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
-async def create_student(name: str):
-    student_id = str(uuid4())
-    student = Student(id=student_id, name=name)
-    await student_collection.insert_one(student.dict())
-    return student
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
 
-async def get_student_progress(name: str):
-    return await student_collection.find_one({"name": name})
 
-async def update_student_progress(name: str, week: str, status: str):
-    result = await student_collection.update_one(
-        {"name": name},
-        {"$set": {f"progress.week{week}": status}}
-    )
-    if result.modified_count == 0:
-       return None
-    return await student_collection.find_one({"name" : name})
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    from app.crud import count_students  # local import
+    total = await count_students()
+    return templates.TemplateResponse("index.html", {"request": request, "total": total})
 
-async def count_students():
-    return await student_collection.count_documents({})
 
-# added Admin CRUD operations - Get all students
+@app.get("/register", response_class=HTMLResponse)
+async def register_form(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
 
-async def get_all_students():
-    students_cursor = student_collection.find({})
-    students = []
-    async for student in students_cursor:
-        students.append(student)
-    return students
+
+@app.post("/register", response_class=HTMLResponse)
+async def register_submit(request: Request, name: str = Form(...)):
+    from app.crud import create_student  # local import
+    student = await create_student(name)
+    return templates.TemplateResponse("register.html", {"request": request, "student": student})
+
+
+@app.get("/progress", response_class=HTMLResponse)
+async def progress(request: Request, name: str = Form(None)):
+    from app.crud import get_student_progress  # local import
+    student = await get_student_progress(name)
+    return templates.TemplateResponse("progress.html", {"request": request, "student": student})
+
+
+@app.post("/progress", response_class=HTMLResponse)
+async def update_progress(request: Request, name: str = Form(...), week: str = Form(...), status: str = Form(...)):
+    from app.crud import update_student_progress  # local import
+    student = await update_student_progress(name, week, status)
+    return templates.TemplateResponse("progress.html", {"request": request, "student": student})
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_panel(request: Request):
+    from app.crud import get_all_students  # local import
+    students = await get_all_students()
+    return templates.TemplateResponse("admin.html", {"request": request, "students": students})
