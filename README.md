@@ -63,33 +63,48 @@ Bonaventure Simeon
 
 1. **Clone the Repository**
 
+```
 git clone https://github.com/bonaventuresimeon/Student-Tracker.git
 cd Student-Tracker
+```
 
 2. **Create Virtual Environment & Install Dependencies**
 
+```
 python3 -m venv venv
 source venv/bin/activate  # On Windows use: venv\Scripts\activate
 pip install -r requirements.txt
+```
 
 3. **Configure Database and Vault**
 
-- Open `app/main.py` and update the Vault IP address if necessary.  
-- Set your Vault token as an environment variable:
+- Create a `.env` and update the Vault IP address if necessary.  
+- Set your Vault token as an environment variable.
+- Remember to `.gitignore` when pushing to github.
 
+```
 export VAULT_TOKEN=<your_vault_token>
+```
 
 4. **Run the Application Locally**
 
+```
 uvicorn app.main:app –host 0.0.0.0 –port 8011 –reload
+```
 
 5. **Access the Application**
 
 Open your browser and visit:  
-http://localhost:8011  
+
+```
+http://localhost:8011
+```
 
 Or if running on a remote server, replace `localhost` with the server’s IP address:  
+
+```
 http://<server-ip>:8011
+```
 
 ---
 
@@ -97,11 +112,15 @@ http://<server-ip>:8011
 
 1. **Build Docker Image**
 
+```
 docker build -t student-tracker .
+```
 
 2. **Run Docker Container**
 
+```
 docker run –env-file .env -p 8011:8000 student-tracker
+```
 
 3. **Push to Docker Hub**
 
@@ -188,17 +207,10 @@ Built for the Cloud Native Series by:
 
 ---
 
-If you want, I can also help you add:  
+Quick Test - Create the following:  
 - GitHub badges (build status, Docker pulls, etc.)  
 - GitHub Actions CI/CD pipelines for automated testing and deployment  
 
 Just ask! 😊
 
 Thank you for using Student-Tracker!
-
-If you want, I can also help generate:
-	•	GitHub badges for your README
-	•	A GitHub Actions workflow for CI/CD
-	•	Dockerfile or deployment scripts
-
-Just let me know!
