@@ -1,4 +1,3 @@
-Sure! Here’s a clean, GitHub-ready README.md format with all headers highlighted and command lines in markdown code blocks as you requested:
 
 # Bonaventure Simeon: Student-Tracker Web App
 
