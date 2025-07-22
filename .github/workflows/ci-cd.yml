@@ -22,7 +22,7 @@ jobs:
     outputs:
       region: ${{ env.AWS_REGION }}
     steps:
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials via OIDC role
         uses: aws-actions/configure-aws-credentials@v4.2.1
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE }}
@@ -35,7 +35,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Login to ECR
+      - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password \
             --region ${{ needs.aws-auth.outputs.region }} \
@@ -44,14 +44,14 @@ jobs:
             --password-stdin \
             ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
 
-      - name: Build & push frontend image
+      - name: Build & push frontend Docker image
         run: |
           docker build -t $ECR_FRONTEND:${{ github.sha }} ./templates
           docker tag $ECR_FRONTEND:${{ github.sha }} \
             ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_FRONTEND:${{ github.sha }}
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_FRONTEND:${{ github.sha }}
 
-      - name: Build & push backend image
+      - name: Build & push backend Docker image
         run: |
           docker build -t $ECR_BACKEND:${{ github.sha }} ./app
           docker tag $ECR_BACKEND:${{ github.sha }} \
@@ -62,13 +62,13 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Reauthenticate AWS
+      - name: Reauthenticate AWS for ECS deploy
         uses: aws-actions/configure-aws-credentials@v4.2.1
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Trigger ECS rolling update
+      - name: Trigger ECS rolling update for services
         run: |
           for svc in frontend-service backend-service; do
             aws ecs update-service \
