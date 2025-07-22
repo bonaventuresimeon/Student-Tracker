@@ -7,7 +7,7 @@ on:
 permissions:
   pages: write
 
-run-name: "Student-Tracker CI/CD by @${{ github.actor }}"
+run-name: "CI/CD by @${{ github.actor }}"
 
 jobs:
   test-backend:
@@ -40,7 +40,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
+          tags: ghcr.io/${{ github.repository_owner | toLowerCase() }}/${{ github.repository | toLowerCase() }}:latest
 
   deploy-frontend:
     needs: build-and-push
