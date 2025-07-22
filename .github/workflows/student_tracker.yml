@@ -1,4 +1,4 @@
-name: Deploy student-tracker content to Pages
+name: Deploy static content to Pages
 
 on:
   push:
