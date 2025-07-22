@@ -1,108 +1,56 @@
-name: CI/CD Pipeline – Docker → AWS + GitHub Pages
+name: CI/CD (backend + Docker + gh‑pages)
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-env:
-  AWS_REGION: eu-west-1
-  ECR_FRONTEND: frontend-repo
-  ECR_BACKEND: backend-repo
+  pages: write  # allow GitHub Pages deployment
 
 jobs:
-  aws-auth:
+  test-backend:
     runs-on: ubuntu-latest
-    outputs:
-      region: ${{ env.AWS_REGION }}
     steps:
-      - name: Configure AWS credentials via OIDC role
-        uses: aws-actions/configure-aws-credentials@v4.2.1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          role-to-assume: ${{ secrets.AWS_OIDC_ROLE }}
-          aws-region: ${{ env.AWS_REGION }}
+          python-version: '3.11'
+      - name: Install deps & run tests
+        run: |
+          pip install -U pip
+          pip install -r requirements.txt
+          pytest -q app
 
   build-and-push:
-    needs: aws-auth
+    needs: test-backend
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Login to Amazon ECR
-        run: |
-          aws ecr get-login-password \
-            --region ${{ needs.aws-auth.outputs.region }} \
-          | docker login \
-            --username AWS \
-            --password-stdin \
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
-
-      - name: Build & push frontend Docker image
-        run: |
-          docker build -t $ECR_FRONTEND:${{ github.sha }} ./templates
-          docker tag $ECR_FRONTEND:${{ github.sha }} \
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_FRONTEND:${{ github.sha }}
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_FRONTEND:${{ github.sha }}
-
-      - name: Build & push backend Docker image
-        run: |
-          docker build -t $ECR_BACKEND:${{ github.sha }} ./app
-          docker tag $ECR_BACKEND:${{ github.sha }} \
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_BACKEND:${{ github.sha }}
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_BACKEND:${{ github.sha }}
-
-  deploy-ecs:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Reauthenticate AWS for ECS deploy
-        uses: aws-actions/configure-aws-credentials@v4.2.1
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
         with:
-          role-to-assume: ${{ secrets.AWS_OIDC_ROLE }}
-          aws-region: ${{ env.AWS_REGION }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
 
-      - name: Trigger ECS rolling update for services
-        run: |
-          for svc in frontend-service backend-service; do
-            aws ecs update-service \
-              --cluster myCluster \
-              --service $svc \
-              --force-new-deployment
-          done
-
-  deploy-pages:
-    if: github.ref == 'refs/heads/main'
+  deploy-frontend:
     needs: build-and-push
     runs-on: ubuntu-latest
-    concurrency:
-      group: 'pages'
-      cancel-in-progress: false
     permissions:
-      pages: write
-      id-token: write
+      contents: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload static site artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: templates
-
+      - uses: actions/checkout@v4
+      - name: Copy templates
+        run: |
+          mkdir site
+          cp -R templates/* site/
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+        uses: peaceiris/actions-gh-pages@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
