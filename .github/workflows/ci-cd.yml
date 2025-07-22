@@ -12,7 +12,7 @@ permissions:
   id-token: write
 
 env:
-  AWS_REGION: eu-west-1
+  AWS_REGION: eu-central-1
   ECR_FRONTEND: frontend-repo
   ECR_BACKEND: backend-repo
 
@@ -23,7 +23,7 @@ jobs:
       region: ${{ env.AWS_REGION }}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v4.2.1
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
@@ -37,9 +37,12 @@ jobs:
 
       - name: Login to ECR
         run: |
-          aws ecr get-login-password --region ${{ needs.aws-auth.outputs.region }} \
-          | docker login --username AWS \
-            --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          aws ecr get-login-password \
+            --region ${{ needs.aws-auth.outputs.region }} \
+          | docker login \
+            --username AWS \
+            --password-stdin \
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
 
       - name: Build & push frontend image
         run: |
@@ -60,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Reauthenticate AWS
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v4.2.1
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
@@ -78,6 +81,12 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: build-and-push
     runs-on: ubuntu-latest
+    concurrency:
+      group: 'pages'
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -85,7 +94,7 @@ jobs:
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload `templates/`
+      - name: Upload static site artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: templates
@@ -93,6 +102,7 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        environment:
-          name: github-pages
-          url: ${{ steps.deployment.outputs.page_url }}
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
