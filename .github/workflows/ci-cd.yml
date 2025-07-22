@@ -12,87 +12,83 @@ permissions:
   id-token: write
 
 env:
-  AWS_REGION: eu-central-1
-  ECR_REPO_FRONTEND: frontend-repo
-  ECR_REPO_BACKEND: backend-repo
+  AWS_REGION: eu-west-1
+  ECR_FRONTEND: frontend-repo
+  ECR_BACKEND: backend-repo
 
 jobs:
-  authenticate:
-    name: Authenticate to AWS
+  aws-auth:
     runs-on: ubuntu-latest
     outputs:
-      aws-region: ${{ env.AWS_REGION }}
+      region: ${{ env.AWS_REGION }}
     steps:
-      - name: Configure AWS credentials via OIDC
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
 
   build-and-push:
-    name: Build & Push Docker Images
-    needs: authenticate
+    needs: aws-auth
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Login to Amazon ECR
+      - name: Login to ECR
         run: |
-          aws ecr get-login-password --region ${{ needs.authenticate.outputs.aws-region }} \
-            | docker login --username AWS \
-              --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          aws ecr get-login-password --region ${{ needs.aws-auth.outputs.region }} \
+          | docker login --username AWS \
+            --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
 
-      - name: Build & Push Frontend image
+      - name: Build & push frontend image
         run: |
-          docker build -t $ECR_REPO_FRONTEND:${{ github.sha }} ./templates
-          docker tag $ECR_REPO_FRONTEND:${{ github.sha }} \
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPO_FRONTEND:${{ github.sha }}
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPO_FRONTEND:${{ github.sha }}
+          docker build -t $ECR_FRONTEND:${{ github.sha }} ./templates
+          docker tag $ECR_FRONTEND:${{ github.sha }} \
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_FRONTEND:${{ github.sha }}
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_FRONTEND:${{ github.sha }}
 
-      - name: Build & Push Backend image
+      - name: Build & push backend image
         run: |
-          docker build -t $ECR_REPO_BACKEND:${{ github.sha }} ./app
-          docker tag $ECR_REPO_BACKEND:${{ github.sha }} \
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPO_BACKEND:${{ github.sha }}
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPO_BACKEND:${{ github.sha }}
+          docker build -t $ECR_BACKEND:${{ github.sha }} ./app
+          docker tag $ECR_BACKEND:${{ github.sha }} \
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_BACKEND:${{ github.sha }}
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_BACKEND:${{ github.sha }}
 
   deploy-ecs:
-    name: Deploy to ECS
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Re-authenticate to AWS
+      - name: Reauthenticate AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Update ECS services
+      - name: Trigger ECS rolling update
         run: |
-          aws ecs update-service \
-            --cluster myCluster \
-            --service frontend-service \
-            --force-new-deployment
-          aws ecs update-service \
-            --cluster myCluster \
-            --service backend-service \
-            --force-new-deployment
+          for svc in frontend-service backend-service; do
+            aws ecs update-service \
+              --cluster myCluster \
+              --service $svc \
+              --force-new-deployment
+          done
 
-  publish-frontend-to-github-pages:
-    name: Deploy Frontend to GitHub Pages
+  deploy-pages:
+    if: github.ref == 'refs/heads/main'
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Setup Pages
+      - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload static site to GitHub Pages artifact
+      - name: Upload `templates/`
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./templates
+          path: templates
 
       - name: Deploy to GitHub Pages
         id: deployment
